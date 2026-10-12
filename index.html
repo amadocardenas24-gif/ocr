@@ -1,346 +1,316 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="color-scheme" content="dark" />
-    <meta name="theme-color" content="#0b0f14" />
-    <title>NEXUS OCR</title>
-    <link rel="icon" href="data:," />
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEXUS - OCR Móvil Local</title>
     <style>
-      :root {
-        --fondo: #0b0f14;
-        --superficie: #141b24;
-        --borde: #243040;
-        --texto: #e8eef5;
-        --texto-secundario: #9fb0c3;
-        --acento: #3ddc84;
-        --informacion: #4aa8ff;
-        --advertencia: #f5b83d;
-        --peligro: #ff6b6b;
-        --radio: 12px;
-      }
-      * { box-sizing: border-box; }
-      body {
-        margin: 0;
-        background: var(--fondo);
-        color: var(--texto);
-        font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-        padding: env(safe-area-inset-top) max(16px, env(safe-area-inset-right)) env(safe-area-inset-bottom) max(16px, env(safe-area-inset-left));
-      }
-      main { max-width: 720px; margin: 0 auto; padding: 16px 0 40px; display: grid; gap: 16px; }
-      h1 { margin: 0; font-size: 1.25rem; }
-      h2 { margin: 0 0 8px; font-size: 1rem; }
-      .subtitulo { margin: 4px 0 0; color: var(--texto-secundario); font-size: 0.9rem; }
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-color: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent: #38bdf8;
+            --accent-hover: #0ea5e9;
+            --border: #334155;
+            --error: #f43f5e;
+            --success: #10b981;
+        }
 
-      .acciones { display: grid; gap: 10px; }
-      .boton {
-        display: flex; align-items: center; justify-content: center;
-        min-height: 56px; padding: 0 18px; border-radius: var(--radio);
-        border: 1px solid var(--borde); background: var(--superficie); color: var(--texto);
-        font: inherit; font-weight: 700; cursor: pointer; text-align: center;
-      }
-      .boton-principal { background: var(--acento); border-color: var(--acento); color: #04110a; font-size: 1.05rem; }
-      .boton-secundario { min-height: 44px; font-weight: 600; font-size: 0.92rem; }
-      .boton[aria-disabled="true"] { opacity: 0.5; pointer-events: none; }
-      .boton:focus-within, .boton:focus-visible { outline: 3px solid var(--informacion); outline-offset: 2px; }
-      /* Los controles de archivo reales quedan ocultos visualmente pero siguen siendo accesibles mediante su etiqueta. */
-      .entrada-oculta { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; clip-path: inset(50%); }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        }
 
-      .panel { background: var(--superficie); border: 1px solid var(--borde); border-radius: var(--radio); padding: 14px 16px; }
-      .vista-previa { width: 100%; max-height: 320px; object-fit: contain; border-radius: 8px; background: #000; }
-      .estado { display: flex; align-items: center; gap: 12px; }
-      .rueda { width: 22px; height: 22px; border-radius: 50%; border: 3px solid var(--borde); border-top-color: var(--acento); animation: girar 0.9s linear infinite; flex: none; }
-      @keyframes girar { to { transform: rotate(360deg); } }
-      @media (prefers-reduced-motion: reduce) { .rueda { animation-duration: 3s; } }
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
 
-      .aviso { border: 1px solid var(--advertencia); background: rgba(245, 184, 61, 0.08); border-radius: var(--radio); padding: 10px 14px; font-size: 0.92rem; margin: 0 0 8px; }
-      .error { border-color: var(--peligro); background: rgba(255, 107, 107, 0.08); }
+        .container {
+            width: 100%;
+            max-width: 600px;
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
 
-      .texto-extraido {
-        margin: 0; padding: 12px; white-space: pre-wrap; overflow-wrap: anywhere;
-        background: var(--fondo); border: 1px solid var(--borde); border-radius: 8px;
-        font: 0.95rem/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      }
-      .insignia { display: inline-block; padding: 2px 10px; border-radius: 999px; border: 1px solid var(--borde); font-size: 0.82rem; color: var(--texto-secundario); margin-left: 6px; }
-      .insignia-buena { color: var(--acento); border-color: var(--acento); }
-      .insignia-baja { color: var(--advertencia); border-color: var(--advertencia); }
+        header {
+            text-align: center;
+            padding: 1rem 0;
+        }
 
-      ul.lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
-      ul.lista li { padding: 10px 12px; background: var(--fondo); border: 1px solid var(--borde); border-radius: 8px; overflow-wrap: anywhere; }
-      .detalle { display: block; color: var(--texto-secundario); font-size: 0.85rem; }
-      .fila-de-herramientas { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
-      .boton-pequeno { min-height: 36px; padding: 0 12px; font-size: 0.85rem; }
-      details summary { cursor: pointer; font-weight: 700; }
-      dl { margin: 10px 0 0; display: grid; gap: 6px; }
-      dl div { display: flex; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--borde); padding-bottom: 4px; }
-      dt { color: var(--texto-secundario); font-size: 0.9rem; }
-      dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
-      [hidden] { display: none !important; }
+        header h1 {
+            font-size: 1.5rem;
+            color: var(--accent);
+            margin-bottom: 0.25rem;
+        }
+
+        header p {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.25rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .capture-section {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            align-items: center;
+            text-align: center;
+        }
+
+        .btn-capture {
+            background-color: var(--accent);
+            color: #0f172a;
+            font-weight: 600;
+            font-size: 1rem;
+            padding: 0.875rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+            transition: background-color 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .btn-capture:hover {
+            background-color: var(--accent-hover);
+        }
+
+        /* Ocultamos el input de archivo real y usamos el botón estilizado */
+        #input-camara {
+            display: none;
+        }
+
+        #preview-container {
+            width: 100%;
+            max-height: 250px;
+            border-radius: 8px;
+            overflow: hidden;
+            display: none;
+            border: 1px solid var(--border);
+        }
+
+        #preview-imagen {
+            width: 100%;
+            height: auto;
+            object-fit: contain;
+            display: block;
+        }
+
+        .loader {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 1rem;
+            color: var(--text-muted);
+        }
+
+        .spinner {
+            width: 36px;
+            height: 36px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .results-section {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            display: none;
+        }
+
+        .result-box {
+            background-color: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+        }
+
+        .result-box h3 {
+            font-size: 0.95rem;
+            color: var(--accent);
+            margin-bottom: 0.5rem;
+        }
+
+        pre {
+            white-space: pre-wrap;
+            word-break: break-word;
+            font-size: 0.9rem;
+            color: var(--text-color);
+            background: transparent;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            border-radius: 4px;
+            background-color: var(--border);
+            color: var(--text-muted);
+            margin-right: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .badge.success { background-color: rgba(16, 185, 129, 0.2); color: var(--success); }
+        .badge.warning { background-color: rgba(244, 63, 94, 0.2); color: var(--error); }
     </style>
-  </head>
-  <body>
-    <main>
-      <header>
-        <h1>NEXUS OCR</h1>
-        <p class="subtitulo">Fotografía un documento: se lee el texto, los códigos y las formas. Todo ocurre en tu red local.</p>
-      </header>
+</head>
+<body>
 
-      <section class="acciones" aria-label="Captura">
-        <!--
-          Control nativo con captura directa: en un teléfono abre la cámara trasera del sistema operativo.
-          No usa la API de cámara en vivo del navegador, por eso funciona también en http dentro de la red local.
-        -->
-        <label class="boton boton-principal" id="etiquetaDeCamara" for="entradaDeCamara">
-          Tomar foto con la cámara trasera
-          <input class="entrada-oculta" id="entradaDeCamara" type="file" accept="image/*" capture="environment" />
-        </label>
-        <label class="boton boton-secundario" id="etiquetaDeGaleria" for="entradaDeGaleria">
-          Elegir una imagen existente
-          <input class="entrada-oculta" id="entradaDeGaleria" type="file" accept="image/*" />
-        </label>
-      </section>
+    <div class="container">
+        <header>
+            <h1>NEXUS OCR</h1>
+            <p>Terminal móvil de captura y procesamiento local</p>
+        </header>
 
-      <section class="panel" id="panelDeVistaPrevia" hidden>
-        <img class="vista-previa" id="vistaPrevia" alt="Vista previa de la foto seleccionada" />
-      </section>
+        <!-- Tarjeta de captura -->
+        <div class="card capture-section">
+            <p style="font-size: 0.9rem; color: var(--text-muted);">
+                Toma una foto clara del documento o receta médica para enviarla al servidor de procesamiento en la PC.
+            </p>
 
-      <section class="panel estado" id="panelDeEstado" role="status" aria-live="polite" hidden>
-        <span class="rueda" id="ruedaDeCarga" aria-hidden="true"></span>
-        <span id="textoDeEstado"></span>
-      </section>
+            <!-- Input nativo con capture="environment" para abrir la cámara trasera directamente -->
+            <input type="file" accept="image/*" capture="environment" id="input-camara">
+            
+            <button class="btn-capture" onclick="document.getElementById('input-camara').click()">
+                📷 Capturar Imagen con Cámara
+            </button>
 
-      <div id="zonaDeResultados" hidden>
-        <section class="panel" id="panelDeAdvertencias" hidden>
-          <h2>Avisos</h2>
-          <div id="listaDeAvisos"></div>
-        </section>
+            <div id="preview-container">
+                <img id="preview-imagen" alt="Vista previa de la captura">
+            </div>
+        </div>
 
-        <section class="panel" aria-labelledby="tituloDeTexto">
-          <div class="fila-de-herramientas">
-            <h2 id="tituloDeTexto">Texto extraído <span class="insignia" id="insigniaDeConfianza"></span></h2>
-            <button class="boton boton-pequeno" id="botonCopiar" type="button">Copiar</button>
-          </div>
-          <pre class="texto-extraido" id="textoExtraido"></pre>
-        </section>
+        <!-- Indicador de carga -->
+        <div class="card loader" id="loader">
+            <div class="spinner"></div>
+            <span>Procesando imagen en la PC (OpenCV + Tesseract)...</span>
+        </div>
 
-        <section class="panel" aria-labelledby="tituloDeCodigos">
-          <h2 id="tituloDeCodigos">Códigos detectados</h2>
-          <ul class="lista" id="listaDeCodigos"></ul>
-        </section>
+        <!-- Sección de resultados -->
+        <div class="card results-section" id="results-section">
+            <div class="result-box">
+                <h3>Texto Extraído (OCR)</h3>
+                <pre id="texto-resultado">Sin resultados aún.</pre>
+            </div>
 
-        <section class="panel" aria-labelledby="tituloDeFormas">
-          <h2 id="tituloDeFormas">Formas detectadas</h2>
-          <ul class="lista" id="listaDeFormas"></ul>
-        </section>
+            <div class="result-box" id="box-codigos" style="display: none;">
+                <h3>Códigos Detectados (Barras / QR)</h3>
+                <div id="lista-codigos"></div>
+            </div>
 
-        <details class="panel">
-          <summary>Detalles técnicos</summary>
-          <dl id="listaDeMetadatos"></dl>
-        </details>
-      </div>
-    </main>
+            <div class="result-box" id="box-advertencias" style="display: none;">
+                <h3>Avisos del Sistema</h3>
+                <div id="lista-advertencias"></div>
+            </div>
+        </div>
+    </div>
 
     <script>
-      "use strict";
+        const inputCamara = document.getElementById('input-camara');
+        const previewContainer = document.getElementById('preview-container');
+        const previewImagen = document.getElementById('preview-imagen');
+        const loader = document.getElementById('loader');
+        const resultsSection = document.getElementById('results-section');
+        const textoResultado = document.getElementById('texto-resultado');
+        const boxCodigos = document.getElementById('box-codigos');
+        const listaCodigos = document.getElementById('lista-codigos');
+        const boxAdvertencias = document.getElementById('box-advertencias');
+        const listaAdvertencias = document.getElementById('lista-advertencias');
 
-      const MEGABYTES_MAXIMOS = {{ megabytes_maximos }};
-      const TIEMPO_MAXIMO_DE_ESPERA_EN_MILISEGUNDOS = 180000;
+        inputCamara.addEventListener('change', async function(evento) {
+            const archivo = evento.target.files[0];
+            if (!archivo) return;
 
-      const elementos = {
-        entradaDeCamara: document.getElementById("entradaDeCamara"),
-        entradaDeGaleria: document.getElementById("entradaDeGaleria"),
-        etiquetaDeCamara: document.getElementById("etiquetaDeCamara"),
-        etiquetaDeGaleria: document.getElementById("etiquetaDeGaleria"),
-        panelDeVistaPrevia: document.getElementById("panelDeVistaPrevia"),
-        vistaPrevia: document.getElementById("vistaPrevia"),
-        panelDeEstado: document.getElementById("panelDeEstado"),
-        ruedaDeCarga: document.getElementById("ruedaDeCarga"),
-        textoDeEstado: document.getElementById("textoDeEstado"),
-        zonaDeResultados: document.getElementById("zonaDeResultados"),
-        panelDeAdvertencias: document.getElementById("panelDeAdvertencias"),
-        listaDeAvisos: document.getElementById("listaDeAvisos"),
-        textoExtraido: document.getElementById("textoExtraido"),
-        insigniaDeConfianza: document.getElementById("insigniaDeConfianza"),
-        botonCopiar: document.getElementById("botonCopiar"),
-        listaDeCodigos: document.getElementById("listaDeCodigos"),
-        listaDeFormas: document.getElementById("listaDeFormas"),
-        listaDeMetadatos: document.getElementById("listaDeMetadatos"),
-      };
+            // Mostrar vista previa local de la imagen tomada
+            const lector = new FileReader();
+            lector.onload = function(e) {
+                previewImagen.src = e.target.result;
+                previewContainer.style.display = 'block';
+            };
+            lector.readAsDataURL(archivo);
 
-      let direccionDeLaVistaPrevia = null;
-      let solicitudEnCurso = null;
+            // Preparar formulario para enviar a la PC
+            const formData = new FormData();
+            formData.append('imagen', archivo);
 
-      function establecerEstadoDeCarga(activo, mensaje, esError = false) {
-        elementos.panelDeEstado.hidden = mensaje === "";
-        elementos.textoDeEstado.textContent = mensaje;
-        elementos.ruedaDeCarga.hidden = !activo;
-        elementos.panelDeEstado.classList.toggle("error", esError);
-        for (const etiqueta of [elementos.etiquetaDeCamara, elementos.etiquetaDeGaleria]) {
-          etiqueta.setAttribute("aria-disabled", activo ? "true" : "false");
-        }
-        elementos.entradaDeCamara.disabled = activo;
-        elementos.entradaDeGaleria.disabled = activo;
-      }
+            // Mostrar loader y ocultar resultados anteriores
+            loader.style.display = 'flex';
+            resultsSection.style.display = 'none';
 
-      function crearElemento(etiqueta, clase, texto) {
-        const elemento = document.createElement(etiqueta);
-        if (clase) elemento.className = clase;
-        if (texto !== undefined) elemento.textContent = texto; // Siempre textContent: el texto leído nunca se interpreta como HTML.
-        return elemento;
-      }
+            try {
+                // Si estás usando ngrok, cambia '/upload' por tu URL completa de ngrok: 'https://xxxx.ngrok-free.app/upload'
+                const respuesta = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
 
-      function mostrarVistaPrevia(archivo) {
-        if (direccionDeLaVistaPrevia) URL.revokeObjectURL(direccionDeLaVistaPrevia);
-        direccionDeLaVistaPrevia = URL.createObjectURL(archivo);
-        elementos.vistaPrevia.src = direccionDeLaVistaPrevia;
-        elementos.panelDeVistaPrevia.hidden = false;
-      }
+                const datos = await respuesta.json();
+                loader.style.display = 'none';
+                resultsSection.style.display = 'flex';
 
-      function mostrarResultados(resultado) {
-        // Avisos
-        elementos.listaDeAvisos.replaceChildren();
-        for (const aviso of resultado.advertencias || []) {
-          elementos.listaDeAvisos.appendChild(crearElemento("p", "aviso", aviso));
-        }
-        elementos.panelDeAdvertencias.hidden = (resultado.advertencias || []).length === 0;
+                if (datos.ok) {
+                    // Mostrar texto extraído
+                    textoResultado.textContent = datos.texto_ocr || "No se detectó texto legible en la imagen.";
 
-        // Texto y confianza
-        const textoLeido = resultado.texto_ocr || "";
-        elementos.textoExtraido.textContent = textoLeido !== "" ? textoLeido : "(No se reconoció texto)";
-        const confianza = Number(resultado.confianza_media_ocr || 0);
-        elementos.insigniaDeConfianza.textContent = textoLeido !== "" ? `confianza ${Math.round(confianza)} por ciento` : "";
-        elementos.insigniaDeConfianza.className = "insignia " + (confianza >= 60 ? "insignia-buena" : "insignia-baja");
-        elementos.botonCopiar.disabled = textoLeido === "";
+                    // Mostrar códigos de barras o QR si existen
+                    if (datos.codigos_detectados && datos.codigos_detectados.length > 0) {
+                        listaCodigos.innerHTML = datos.codigos_detectados.map(c => 
+                            `<span class="badge success">${c.tipo.toUpperCase()} (${c.formato}): ${c.valor}</span>`
+                        ).join('');
+                        boxCodigos.style.display = 'block';
+                    } else {
+                        boxCodigos.style.display = 'none';
+                    }
 
-        // Códigos
-        elementos.listaDeCodigos.replaceChildren();
-        const codigos = resultado.codigos_detectados || [];
-        if (codigos.length === 0) {
-          elementos.listaDeCodigos.appendChild(crearElemento("li", "", "No se detectaron códigos de barras ni QR."));
-        }
-        for (const codigo of codigos) {
-          const elemento = crearElemento("li", "");
-          elemento.appendChild(crearElemento("strong", "", codigo.valor));
-          elemento.appendChild(crearElemento("span", "detalle", codigo.tipo === "qr" ? "Código QR" : `Código de barras, formato ${codigo.formato}`));
-          elementos.listaDeCodigos.appendChild(elemento);
-        }
+                    // Mostrar advertencias si las hay
+                    if (datos.advertencias && datos.advertencias.length > 0) {
+                        listaAdvertencias.innerHTML = datos.advertencias.map(a => 
+                            `<div style="font-size: 0.85rem; color: var(--error); margin-bottom: 0.25rem;">⚠️ ${a}</div>`
+                        ).join('');
+                        boxAdvertencias.style.display = 'block';
+                    } else {
+                        boxAdvertencias.style.display = 'none';
+                    }
 
-        // Formas (agrupadas por tipo)
-        elementos.listaDeFormas.replaceChildren();
-        const formas = resultado.formas_detectadas || [];
-        if (formas.length === 0) {
-          elementos.listaDeFormas.appendChild(crearElemento("li", "", "No se detectaron formas geométricas básicas."));
-        }
-        const conteoPorForma = new Map();
-        for (const forma of formas) conteoPorForma.set(forma.forma, (conteoPorForma.get(forma.forma) || 0) + 1);
-        for (const [nombre, cantidad] of conteoPorForma) {
-          const elemento = crearElemento("li", "");
-          elemento.appendChild(crearElemento("strong", "", `${cantidad} × ${nombre}`));
-          elementos.listaDeFormas.appendChild(elemento);
-        }
+                } else {
+                    textoResultado.textContent = "Error del servidor: " + (datos.error || "Desconocido");
+                }
 
-        // Metadatos
-        elementos.listaDeMetadatos.replaceChildren();
-        const metadatos = resultado.metadatos || {};
-        const filas = [
-          ["Idioma de lectura", metadatos.idioma_usado || "ninguno"],
-          ["Tamaño recibido", `${((metadatos.tamano_recibido_en_bytes || 0) / 1024).toFixed(0)} kilobytes`],
-          ["Dimensiones originales", metadatos.dimensiones_originales ? `${metadatos.dimensiones_originales.ancho} por ${metadatos.dimensiones_originales.alto}` : "—"],
-          ["Dimensiones analizadas", metadatos.dimensiones_procesadas ? `${metadatos.dimensiones_procesadas.ancho} por ${metadatos.dimensiones_procesadas.alto}` : "—"],
-          ["Duración total", `${metadatos.duracion_total_en_milisegundos ?? 0} milisegundos`],
-        ];
-        for (const [nombre, valor] of filas) {
-          const fila = crearElemento("div", "");
-          fila.appendChild(crearElemento("dt", "", nombre));
-          fila.appendChild(crearElemento("dd", "", String(valor)));
-          elementos.listaDeMetadatos.appendChild(fila);
-        }
-
-        elementos.zonaDeResultados.hidden = false;
-        elementos.zonaDeResultados.style.display = "grid";
-        elementos.zonaDeResultados.style.gap = "16px";
-      }
-
-      async function enviarImagen(archivo) {
-        if (!archivo) return;
-        if (!archivo.type.startsWith("image/")) {
-          establecerEstadoDeCarga(false, "El archivo elegido no es una imagen.", true);
-          return;
-        }
-        if (archivo.size > MEGABYTES_MAXIMOS * 1024 * 1024) {
-          establecerEstadoDeCarga(false, `La imagen pesa más de ${MEGABYTES_MAXIMOS} megabytes. Baja la calidad de la cámara e inténtalo de nuevo.`, true);
-          return;
-        }
-
-        mostrarVistaPrevia(archivo);
-        elementos.zonaDeResultados.hidden = true;
-        establecerEstadoDeCarga(true, "Procesando imagen y analizando…");
-
-        const datosDelFormulario = new FormData();
-        datosDelFormulario.append("imagen", archivo);
-
-        solicitudEnCurso = new AbortController();
-        const temporizador = window.setTimeout(() => solicitudEnCurso.abort(), TIEMPO_MAXIMO_DE_ESPERA_EN_MILISEGUNDOS);
-        try {
-          const respuesta = await fetch("/upload", { method: "POST", body: datosDelFormulario, signal: solicitudEnCurso.signal });
-          let contenido = null;
-          try {
-            contenido = await respuesta.json();
-          } catch (errorDeInterpretacion) {
-            throw new Error(`El servidor respondió con un formato inesperado (código ${respuesta.status}).`);
-          }
-          if (!respuesta.ok || !contenido.ok) {
-            throw new Error(contenido.error || `El servidor devolvió el código ${respuesta.status}.`);
-          }
-          establecerEstadoDeCarga(false, "");
-          mostrarResultados(contenido);
-        } catch (error) {
-          const textoDelError =
-            error.name === "AbortError"
-              ? "El análisis tardó demasiado y se canceló. Prueba con una foto más pequeña."
-              : error instanceof TypeError
-                ? "No se pudo contactar con el servidor. Comprueba que siga encendido y que estés en la misma red."
-                : error.message;
-          establecerEstadoDeCarga(false, textoDelError, true);
-        } finally {
-          window.clearTimeout(temporizador);
-          solicitudEnCurso = null;
-          // Se limpian los controles para poder elegir de nuevo exactamente la misma foto.
-          elementos.entradaDeCamara.value = "";
-          elementos.entradaDeGaleria.value = "";
-        }
-      }
-
-      elementos.entradaDeCamara.addEventListener("change", (evento) => enviarImagen(evento.target.files[0]));
-      elementos.entradaDeGaleria.addEventListener("change", (evento) => enviarImagen(evento.target.files[0]));
-
-      // Copiar: la API moderna solo existe en contextos seguros (https); en http local se usa el método clásico.
-      elementos.botonCopiar.addEventListener("click", async () => {
-        const texto = elementos.textoExtraido.textContent;
-        let copiado = false;
-        try {
-          if (navigator.clipboard && window.isSecureContext) {
-            await navigator.clipboard.writeText(texto);
-            copiado = true;
-          }
-        } catch (errorDePortapapeles) {
-          copiado = false;
-        }
-        if (!copiado) {
-          const areaTemporal = document.createElement("textarea");
-          areaTemporal.value = texto;
-          areaTemporal.style.position = "fixed";
-          areaTemporal.style.opacity = "0";
-          document.body.appendChild(areaTemporal);
-          areaTemporal.select();
-          try { copiado = document.execCommand("copy"); } catch (errorDeCopia) { copiado = false; }
-          areaTemporal.remove();
-        }
-        const textoOriginal = elementos.botonCopiar.textContent;
-        elementos.botonCopiar.textContent = copiado ? "Copiado" : "No se pudo copiar";
-        window.setTimeout(() => { elementos.botonCopiar.textContent = textoOriginal; }, 1500);
-      });
+            } catch (error) {
+                loader.style.display = 'none';
+                resultsSection.style.display = 'flex';
+                textoResultado.textContent = "Error de conexión con el servidor en la PC. Revisa que el script app.py esté corriendo y la URL o red sean accesibles.";
+                console.error(error);
+            }
+        });
     </script>
-  </body>
+</body>
 </html>
